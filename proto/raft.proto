@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package raft;
+
+service RaftService {
+    rpc SendMessage (MessageRequest) returns (MessageResponse);
+}
+
+message MessageRequest {
+    string from = 1;
+    string content = 2;
+}
+
+message MessageResponse {
+    string reply = 1;
+}
