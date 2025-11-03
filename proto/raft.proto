@@ -2,15 +2,9 @@ syntax = "proto3";
 
 package raft;
 
+import "configNet.proto";
+
 service RaftService {
-    rpc SendMessage (MessageRequest) returns (MessageResponse);
-}
-
-message MessageRequest {
-    string from = 1;
-    string content = 2;
-}
-
-message MessageResponse {
-    string reply = 1;
+    rpc SendMessage (configs.MessageRequest) returns (configs.MessageResponse);
+    rpc RequestVote (configs.RequestVoteRequest) returns (configs.RequestVoteResponse);
 }

@@ -10,13 +10,17 @@ int main()
     vec.push_back(arg1);
     vec.push_back(arg2);
     vec.push_back(arg3);
+    int id = 0;
 
     struct netArgs args;
     std::string port_ = "";
-    std::cout << " cin for port";
+    std::cout << " cin for port ";
     std::cin >> port_;
     std::cout << std::endl;
+    std::cout << " cin for nodeID ";
+    std::cin >> id;
+    std::cout << std::endl;
     args = {"127.0.0.1", port_};
-    RaftNode node1(args, vec);
+    RaftNode node1(args, id, vec);
     node1.StartService();
 }

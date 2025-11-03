@@ -2,6 +2,7 @@
 
 #include <grpcpp/grpcpp.h>
 #include "raft.grpc.pb.h"
+#include "configNet.grpc.pb.h"
 
 class RaftNode;
 
@@ -11,8 +12,12 @@ class RaftServiceImpl final : public raft::RaftService::Service
 {
 public:
     Status SendMessage(grpc::ServerContext *context,
-                       const raft::MessageRequest *request,
-                       raft::MessageResponse *response) override;
+                       const configs::MessageRequest *request,
+                       configs::MessageResponse *response) override;
+
+    Status RequestVote(grpc::ServerContext *context,
+                       const configs::RequestVoteRequest *request,
+                       configs::RequestVoteResponse *response) override;
     RaftServiceImpl(RaftNode &node_);
 
 private:

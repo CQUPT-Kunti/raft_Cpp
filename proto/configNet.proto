@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package configs;
+
+
+//  rpc SendMessage (MessageRequest) returns (MessageResponse);
+
+message MessageRequest {
+    string from = 1;
+    string content = 2;
+}
+
+message MessageResponse {
+    string reply = 1;
+}
+
+// Heat
+
+message LogEntity {
+    int32 index = 1;
+    int32 term = 2;
+    string command = 3;
+}
+
+
+message AppendEntriesRequest{
+    int32 term = 1;
+    int32 leaderId = 2;
+    repeated LogEntity entries = 3;
+    int32 leaderCommit = 4;
+}
+
+
+message AppendEntriesResponse{
+    int32 term = 1;
+    bool success = 2;
+}
+
+// RequestVote
+
+message RequestVoteRequest{
+    int32 term = 1;               // 候选人的任期号
+    int32 condidateId = 2;        // 请求选票的候选人的 ID
+    int32 lastLogIndex = 3;       // 候选人的最后日志条目的索引值
+    int32 lastLogTerm = 4;        // 候选人最后日志条目的任期号
+}
+
+message RequestVoteResponse{
+    int32 term = 1;               // 当前任期号，以便于候选人去更新自己的任期号
+    int32 voteGranted = 2;        // 候选人赢得了此张选票时为真
+}
+
+
+

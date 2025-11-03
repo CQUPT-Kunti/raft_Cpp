@@ -2,11 +2,19 @@
 #include <iostream>
 #include <grpcpp/grpcpp.h>
 
-RaftNode::RaftNode(netArgs args, std::vector<netArgs> arg_s) : service(*this)
+RaftNode::RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s) : service(*this)
 {
     net_args = args;
-    nodeId = "2A";
+    nodeId = node_id;
     group = arg_s;
+
+    node_args.state = NodeState::Follower;
+
+    node_args.currentTerm = 0;
+    node_args.votedFor = -1;
+    node_args.log.clear();
+
+    node_args.commitIndex = node_args.lastApplied = 0;
 }
 
 std::vector<netArgs> RaftNode::getGroup()
@@ -48,12 +56,12 @@ void RaftNode::InitStubs()
 
 void RaftNode::BroadcastMessage(const std::string &content)
 {
-    raft::MessageRequest request;
+    configs::MessageRequest request;
     request.set_from(net_args.ip + ":" + net_args.port);
     request.set_content("test");
     for (const auto &[port, stub] : peers)
     {
-        raft::MessageResponse response;
+        configs::MessageResponse response;
         grpc::ClientContext context;
         grpc::Status status = stub->SendMessage(&context, request, &response);
         if (status.ok())

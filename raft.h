@@ -10,14 +10,15 @@ class RaftNode
 {
 private:
     netArgs net_args;
-    std::string nodeId;
+    NodeArgs node_args;
+    int nodeId;
     std::vector<netArgs> group;
     RaftServiceImpl service;
     std::unique_ptr<grpc::Server> server_;
     std::map<std::string, std::unique_ptr<raft::RaftService::Stub>> peers;
 
 public:
-    RaftNode(netArgs args, std::vector<netArgs> arg_s);
+    RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s);
     void StartService();
     std::vector<netArgs> getGroup();
     netArgs getNetArgs();
