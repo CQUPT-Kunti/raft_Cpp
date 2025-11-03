@@ -60,6 +60,7 @@ add_executable(raft_node
     main.cpp
     raft.cpp
     raftService.cpp
+    time_loop.cpp
     ${GENERATED_SRCS}   # 添加生成的 cpp 文件
 )
 

@@ -1,14 +1,17 @@
 #pragma once
 
 #include "configArgs.h"
+#include "time_loop.h"
 #include "raftService.h"
+#include "raft.grpc.pb.h"
+
 #include <grpcpp/grpcpp.h>
 #include <memory>
-#include "raft.grpc.pb.h"
 
 class RaftNode
 {
 private:
+    TimeEvent timeEvent;
     netArgs net_args;
     NodeArgs node_args;
     int nodeId;
@@ -22,6 +25,7 @@ public:
     void StartService();
     std::vector<netArgs> getGroup();
     netArgs getNetArgs();
+    NodeArgs &getNodeArgs();
     void BroadcastMessage(const std::string &content);
     void InitStubs();
 };

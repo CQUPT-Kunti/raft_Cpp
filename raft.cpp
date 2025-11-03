@@ -1,6 +1,7 @@
 #include "raft.h"
 #include <iostream>
 #include <grpcpp/grpcpp.h>
+#include <thread>
 
 RaftNode::RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s) : service(*this)
 {
@@ -29,6 +30,17 @@ netArgs RaftNode::getNetArgs()
 
 void RaftNode::StartService()
 {
+
+    timeEvent.addRandomTimer(150, 300, [this]()
+                             { std::cout << "⏰ Node " << nodeId << ": election timeout triggered!" << std::endl; });
+
+    std::thread([this]()
+                {
+        while (true) {
+            timeEvent.pollOnce(); // 只检查当前是否有事件
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        } })
+        .detach();
     std::string address = net_args.ip + ":" + net_args.port;
     grpc::ServerBuilder builder;
     builder.AddListeningPort(address, grpc::InsecureServerCredentials());
