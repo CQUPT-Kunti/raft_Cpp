@@ -7,7 +7,9 @@
 
 #include <grpcpp/grpcpp.h>
 #include <memory>
-
+#include <mutex>
+#include <set>
+#include <string>
 class RaftNode
 {
 private:
@@ -19,6 +21,9 @@ private:
     RaftServiceImpl service;
     std::unique_ptr<grpc::Server> server_;
     std::map<std::string, std::unique_ptr<raft::RaftService::Stub>> peers;
+    std::mutex mtx;
+
+    int voteNums;
 
 public:
     RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s);
@@ -28,4 +33,8 @@ public:
     NodeArgs &getNodeArgs();
     void BroadcastMessage(const std::string &content);
     void InitStubs();
+    std::mutex &getMutex();
+    void Vote();
+
+    bool checkLogUptodate(int term, int index);
 };
