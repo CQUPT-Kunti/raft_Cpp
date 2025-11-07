@@ -18,6 +18,10 @@ public:
     Status RequestVote(grpc::ServerContext *context,
                        const configs::RequestVoteRequest *request,
                        configs::RequestVoteResponse *response) override;
+
+    Status HeartSend(grpc::ServerContext *context,
+                     const configs::AppendEntriesRequest *request,
+                     configs::AppendEntriesResponse *response) override;
     RaftServiceImpl(RaftNode &node_);
 
 private:

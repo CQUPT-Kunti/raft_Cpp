@@ -10,6 +10,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 class RaftNode
 {
 private:
@@ -25,6 +26,10 @@ private:
 
     int voteNums;
 
+    // thread
+    std::thread vote_thread;
+    std::thread heat_thread;
+
 public:
     RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s);
     void StartService();
@@ -36,5 +41,9 @@ public:
     std::mutex &getMutex();
     void Vote();
 
+    void ResetElectionTimer();
+
     bool checkLogUptodate(int term, int index);
+    // 心跳
+    void StartHeartbeatThread();
 };

@@ -58,3 +58,42 @@ Status RaftServiceImpl::RequestVote(grpc::ServerContext *context,
     }
     return Status::OK;
 }
+
+// 星跳发送
+Status RaftServiceImpl::HeartSend(grpc::ServerContext *constext,
+                                  const configs::AppendEntriesRequest *request,
+                                  configs::AppendEntriesResponse *response)
+{
+    std::lock_guard<std::mutex> lock(node.getMutex());
+    NodeArgs tempNodeConfig = node.getNodeArgs();
+
+    std::cout << "=======  heart begin ========" << std::endl;
+
+    if (request->term() < tempNodeConfig.currentTerm)
+    {
+        response->set_success(false);
+        response->set_term(tempNodeConfig.currentTerm);
+        return grpc::Status(grpc::INVALID_ARGUMENT, "leader's term is too small");
+    }
+
+    if (request->term() > tempNodeConfig.currentTerm)
+    {
+        tempNodeConfig.currentTerm = request->term();
+        tempNodeConfig.state = NodeState::Follower;
+        tempNodeConfig.votedFor = -1;
+    }
+
+    node.ResetElectionTimer();
+
+    // 4. 更新 commitIndex（空心跳 entries.size()==0 也可以处理）
+    if (request->leadercommit() > tempNodeConfig.commitIndex)
+    {
+        tempNodeConfig.commitIndex = std::min(request->leadercommit(), (int)tempNodeConfig.log.size() - 1);
+    }
+
+    std::cout << "=======  heart end ========" << std::endl;
+
+    response->set_term(tempNodeConfig.currentTerm);
+    response->set_success(true);
+    return Status::OK;
+}

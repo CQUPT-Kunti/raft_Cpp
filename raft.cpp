@@ -42,14 +42,14 @@ void RaftNode::StartService()
     timeEvent.addRandomTimer(150, 300, [this]()
                              { this->Vote(); });
 
-    std::thread([this]()
-                {
+    vote_thread = std::thread([this]()
+                              {
         while (true)
         {
             timeEvent.pollOnce(); // 只检查当前是否有事件
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        } })
-        .detach();
+        } });
+    vote_thread.detach();
     server_->Wait();
 }
 
@@ -121,6 +121,13 @@ void RaftNode::BroadcastMessage(const std::string &content)
 
 void RaftNode::Vote()
 {
+
+    // 领导者不进行二次选举，只进行心跳
+    if (node_args.state == NodeState::Leader)
+    {
+        return;
+    }
+
     {
         std::lock_guard<std::mutex> lk(mtx);
         node_args.currentTerm += 1; // 新任期
@@ -171,11 +178,37 @@ void RaftNode::Vote()
 
         if (voteNums >= majority)
         {
-            std::lock_guard<std::mutex> lk(mtx);
-            node_args.state = NodeState::Leader;
-            std::cout << (net_args.ip + ":" + net_args.port + " 我是 Leader 我的票数：" + std::to_string(voteNums)) << std::endl;
-            node_args.votedFor = nodeId;
+            {
+                std::lock_guard<std::mutex> lk(mtx);
+                node_args.state = NodeState::Leader;
+                std::cout << (net_args.ip + ":" + net_args.port + " 我是 Leader 我的票数：" + std::to_string(voteNums)) << std::endl;
+                node_args.votedFor = nodeId;
+            }
+            StartHeartbeatThread();
             return;
         }
     }
+}
+
+void RaftNode::StartHeartbeatThread()
+{
+    heat_thread = std::thread([this]()
+                              {
+                                  while (true)
+                                  {
+                                      std::lock_guard<std::mutex> lk(mtx);
+                                      if (node_args.state != NodeState::Leader)
+                                            break; 
+                                  // operation
+                                      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                                  } });
+    heat_thread.detach();
+}
+
+void RaftNode::ResetElectionTimer()
+{
+    int timeout_fd = timeEvent.addRandomTimer(150, 300, [this]()
+                                              {
+                                                  this->Vote(); // 超时触发选举
+                                              });
 }
