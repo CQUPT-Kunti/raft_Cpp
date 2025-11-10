@@ -1,4 +1,5 @@
 #include "raft.h"
+#include <future>
 int main()
 {
     std::vector<netArgs> vec;
@@ -12,15 +13,18 @@ int main()
     vec.push_back(arg3);
     int id = 0;
 
-    struct netArgs args;
-    std::string port_ = "";
-    std::cout << " cin for port ";
-    std::cin >> port_;
-    std::cout << std::endl;
-    std::cout << " cin for nodeID ";
-    std::cin >> id;
-    std::cout << std::endl;
-    args = {"127.0.0.1", port_};
-    RaftNode node1(args, id, vec);
-    node1.StartService();
+    std::vector<std::future<void>> futures;
+    for (auto &arg : vec)
+    {
+        futures.push_back(std::async(std::launch::async, [arg, id, vec]()
+                                     { RaftNode node(arg, id, vec); 
+                                     node.StartService(); }));
+        id++;
+    }
+
+    for (auto &fut : futures)
+    {
+        fut.get();
+    }
+    return 0;
 }

@@ -39,18 +39,18 @@ void RaftNode::StartService()
     std::cout << "Node " << nodeId << " listening on " << address << std::endl;
     InitStubs();
 
-    timeEvent.addRandomTimer(150, 300, [this]()
-                             { this->Vote(); });
+    // timeEvent.addRandomTimer(150, 300, [this]()
+    //                          { this->Vote(); });
 
-    vote_thread = std::thread([this]()
-                              {
-        while (true)
-        {
-            timeEvent.pollOnce(); // 只检查当前是否有事件
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        } });
-    vote_thread.detach();
-    server_->Wait();
+    // vote_thread = std::thread([this]()
+    //                           {
+    //     while (true)
+    //     {
+    //         timeEvent.pollOnce(); // 只检查当前是否有事件
+    //         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    //     } });
+    // vote_thread.detach();
+    // server_->Wait();
 }
 
 NodeArgs &RaftNode::getNodeArgs()
