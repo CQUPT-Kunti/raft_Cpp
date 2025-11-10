@@ -17,3 +17,10 @@ Status RaftServiceImpl::SendMessage(grpc::ServerContext *context,
 }
 
 RaftServiceImpl::RaftServiceImpl(RaftNode &node_) : node(node_) {}
+
+Status RaftServiceImpl::RequestVote(grpc::ServerContext *context,
+                                    const configs::RequestVoteRequest *request,
+                                    configs::RequestVoteResponse *response)
+{
+    return Status::OK;
+}
