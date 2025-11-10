@@ -17,62 +17,22 @@ RaftNode::RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s) : serv
     node_args.commitIndex = node_args.lastApplied = 0;
 }
 
-std::vector<netArgs> RaftNode::getGroup()
+std::vector<netArgs> &RaftNode::getGroup()
 {
     return group;
 }
 
-netArgs RaftNode::getNetArgs()
+netArgs &RaftNode::getNetArgs()
 {
     return net_args;
 }
 
+NodeArgs &RaftNode::getNodeArgs()
+{
+    return node_args;
+}
+
 void RaftNode::StartService()
 {
-    std::string address = net_args.ip + ":" + net_args.port;
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort(address, grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-    server_ = builder.BuildAndStart();
-    std::cout << "Node " << nodeId << " listening on " << address << std::endl;
-    InitStubs();
-    BroadcastMessage("ni hao");
-    server_->Wait();
-}
-
-void RaftNode::InitStubs()
-{
-    for (const auto &peer : group)
-    {
-        if (peer == net_args)
-        {
-            continue;
-        }
-        std::string target = peer.ip + ":" + peer.port;
-        peers[peer.port] = raft::RaftService::NewStub(
-            grpc::CreateChannel(target, grpc::InsecureChannelCredentials()));
-    }
-}
-
-void RaftNode::BroadcastMessage(const std::string &content)
-{
-    configs::MessageRequest request;
-    request.set_from(net_args.ip + ":" + net_args.port);
-    request.set_content("test");
-    for (const auto &[port, stub] : peers)
-    {
-        configs::MessageResponse response;
-        grpc::ClientContext context;
-        grpc::Status status = stub->SendMessage(&context, request, &response);
-        if (status.ok())
-        {
-            std::cout << "Message sent to " << port
-                      << ", reply: " << response.reply() << std::endl;
-        }
-        else
-        {
-            std::cerr << "Failed to send to " << port
-                      << ", error: " << status.error_message() << std::endl;
-        }
-    }
+    service.Startgrpc();
 }

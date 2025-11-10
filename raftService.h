@@ -20,6 +20,13 @@ public:
                        configs::RequestVoteResponse *response) override;
     RaftServiceImpl(RaftNode &node_);
 
+    void Startgrpc();
+    void InitStubs();
+    void BroadcastMessage(std::string msg);
+
 private:
+    std::map<std::string, std::unique_ptr<raft::RaftService::Stub>> peers;
     RaftNode &node;
+    grpc::ServerBuilder build;
+    std::unique_ptr<grpc::Server> server_;
 };
