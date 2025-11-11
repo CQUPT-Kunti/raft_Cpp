@@ -35,4 +35,5 @@ NodeArgs &RaftNode::getNodeArgs()
 void RaftNode::StartService()
 {
     service.Startgrpc();
+    std::cout << " 是否 已经 阻塞" << std::endl;
 }

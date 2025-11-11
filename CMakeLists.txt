@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Protobuf REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(Threads REQUIRED)
+find_package(asio-grpc CONFIG REQUIRED)
+
 
 # proto 文件
 file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
@@ -79,4 +81,5 @@ target_link_libraries(raft_node
     gRPC::grpc++
     protobuf::libprotobuf
     Threads::Threads
+    asio-grpc::asio-grpc
 )

@@ -19,6 +19,12 @@ Status RaftServiceImpl::SendMessage(grpc::ServerContext *context,
 
 RaftServiceImpl::RaftServiceImpl(RaftNode &node_) : node(node_) {}
 
+RaftServiceImpl::~RaftServiceImpl()
+{
+    if (serverThread_.joinable())
+        serverThread_.join();
+}
+
 Status RaftServiceImpl::RequestVote(grpc::ServerContext *context,
                                     const configs::RequestVoteRequest *request,
                                     configs::RequestVoteResponse *response)
@@ -42,10 +48,10 @@ void RaftServiceImpl::Startgrpc()
     }
     InitStubs();
 
-    // 异步阻塞等待
-    std::thread([this]()
-                { server_->Wait(); })
-        .detach();
+    BroadcastMessageAsync("NI HAO");
+
+    serverThread_ = std::thread([this]()
+                                { server_->Wait(); });
 }
 
 void RaftServiceImpl::InitStubs()
@@ -79,4 +85,32 @@ void RaftServiceImpl::BroadcastMessage(std::string msg)
             std::cerr << "Failed to send to " << port
                       << ", error: " << status.error_message() << std::endl;
     }
+}
+
+void RaftServiceImpl::BroadcastMessageAsync(std::string msg)
+{
+    configs::MessageRequest request;
+    netArgs &tempNet = node.getNetArgs();
+    request.set_from(tempNet.ip + ":" + tempNet.port);
+    request.set_content(msg);
+
+    std::vector<std::future<void>> futures;
+
+    for (auto &[port, stub] : peers)
+    {
+        futures.emplace_back(std::async(std::launch::async, [stub = stub.get(), port, request]()
+                                        {
+            grpc::ClientContext context;
+            configs::MessageResponse response;
+            grpc::Status status = stub->SendMessage(&context, request, &response);
+            if (status.ok())
+                std::cout << "Message sent to " << port
+                          << ", reply: " << response.reply() << std::endl;
+            else
+                std::cerr << "Failed to send to " << port
+                          << ", error: " << status.error_message() << std::endl; }));
+    }
+
+    for (auto &f : futures)
+        f.get();
 }

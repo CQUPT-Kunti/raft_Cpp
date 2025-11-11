@@ -4,6 +4,10 @@
 #include "raft.grpc.pb.h"
 #include "configNet.grpc.pb.h"
 
+#include <future>
+#include <vector>
+#include <thread>
+
 class RaftNode;
 
 using grpc::Status;
@@ -19,12 +23,14 @@ public:
                        const configs::RequestVoteRequest *request,
                        configs::RequestVoteResponse *response) override;
     RaftServiceImpl(RaftNode &node_);
-
+    ~RaftServiceImpl();
     void Startgrpc();
     void InitStubs();
     void BroadcastMessage(std::string msg);
+    void BroadcastMessageAsync(std::string msg);
 
 private:
+    std::thread serverThread_;
     std::map<std::string, std::unique_ptr<raft::RaftService::Stub>> peers;
     RaftNode &node;
     grpc::ServerBuilder build;
