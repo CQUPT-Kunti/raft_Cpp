@@ -41,8 +41,11 @@ void RaftServiceImpl::Startgrpc()
         return;
     }
     InitStubs();
-    BroadcastMessage("ni hao");
-    server_->Wait();
+
+    // 异步阻塞等待
+    std::thread([this]()
+                { server_->Wait(); })
+        .detach();
 }
 
 void RaftServiceImpl::InitStubs()

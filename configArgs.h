@@ -13,6 +13,13 @@ struct netArgs
     }
 };
 
+struct TimerArgs
+{
+    std::chrono::steady_clock::time_point startTime; // 开始时间
+    std::chrono::steady_clock::time_point endTime;   // 结束时间
+    std::chrono::milliseconds processTime;           // 处理时长（间隔）
+};
+
 enum class NodeState
 {
     Follower,

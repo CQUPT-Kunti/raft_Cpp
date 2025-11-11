@@ -2,8 +2,10 @@
 
 #include "configArgs.h"
 #include "raftService.h"
-#include <grpcpp/grpcpp.h>
 #include <memory>
+#include <thread>
+
+#include <grpcpp/grpcpp.h>
 #include "raft.grpc.pb.h"
 
 class RaftNode
