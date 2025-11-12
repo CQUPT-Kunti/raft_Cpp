@@ -7,6 +7,7 @@ RaftNode::RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s) : serv
     net_args = args;
     nodeId = node_id;
     group = arg_s;
+    voteNums = 0;
 
     node_args.state = NodeState::Follower;
 
@@ -30,6 +31,29 @@ netArgs &RaftNode::getNetArgs()
 NodeArgs &RaftNode::getNodeArgs()
 {
     return node_args;
+}
+
+std::shared_mutex &RaftNode::getMutex()
+{
+    return mtx;
+}
+
+bool RaftNode::checkLogUptodate(int term, int index)
+{
+    if (node_args.log.empty())
+        return true;
+
+    if (term > node_args.log.back().term)
+    {
+        return true;
+    }
+
+    if (term == node_args.log.back().term && index >= node_args.log.size())
+    {
+        return true;
+    }
+
+    return false;
 }
 
 void RaftNode::StartService()

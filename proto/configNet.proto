@@ -47,7 +47,7 @@ message RequestVoteRequest{
 
 message RequestVoteResponse{
     int32 term = 1;               // 当前任期号，以便于候选人去更新自己的任期号
-    int32 voteGranted = 2;        // 候选人赢得了此张选票时为真
+    bool voteGranted = 2;        // 候选人赢得了此张选票时为真
 }
 
 

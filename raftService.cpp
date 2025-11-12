@@ -1,11 +1,9 @@
 #include "raftService.h"
-
-#include <iostream>
-
-#include <grpcpp/grpcpp.h>
-
-#include "configArgs.h"
 #include "raft.h"
+
+#include <random>
+#include <iostream>
+#include <grpcpp/grpcpp.h>
 
 Status RaftServiceImpl::SendMessage(grpc::ServerContext *context,
                                     const configs::MessageRequest *request,
@@ -17,7 +15,7 @@ Status RaftServiceImpl::SendMessage(grpc::ServerContext *context,
     return Status::OK;
 }
 
-RaftServiceImpl::RaftServiceImpl(RaftNode &node_) : node(node_) {}
+RaftServiceImpl::RaftServiceImpl(RaftNode &node_) : node(node_), tempNodeconfig(node_.getNodeArgs()) {}
 
 RaftServiceImpl::~RaftServiceImpl()
 {
@@ -48,7 +46,7 @@ void RaftServiceImpl::Startgrpc()
     }
     InitStubs();
 
-    BroadcastMessageAsync("NI HAO");
+    Vote();
 
     serverThread_ = std::thread([this]()
                                 { server_->Wait(); });
@@ -65,52 +63,4 @@ void RaftServiceImpl::InitStubs()
         peers[peer.port] = raft::RaftService::NewStub(
             grpc::CreateChannel(target, grpc::InsecureChannelCredentials()));
     }
-}
-
-void RaftServiceImpl::BroadcastMessage(std::string msg)
-{
-    configs::MessageRequest request;
-    netArgs &tempNet = node.getNetArgs();
-    request.set_from(tempNet.ip + ":" + tempNet.port);
-    request.set_content("test");
-    for (const auto &[port, stub] : peers)
-    {
-        configs::MessageResponse response;
-        grpc::ClientContext context;
-        grpc::Status status = stub->SendMessage(&context, request, &response);
-        if (status.ok())
-            std::cout << "Message sent to " << port
-                      << ", reply: " << response.reply() << std::endl;
-        else
-            std::cerr << "Failed to send to " << port
-                      << ", error: " << status.error_message() << std::endl;
-    }
-}
-
-void RaftServiceImpl::BroadcastMessageAsync(std::string msg)
-{
-    configs::MessageRequest request;
-    netArgs &tempNet = node.getNetArgs();
-    request.set_from(tempNet.ip + ":" + tempNet.port);
-    request.set_content(msg);
-
-    std::vector<std::future<void>> futures;
-
-    for (auto &[port, stub] : peers)
-    {
-        futures.emplace_back(std::async(std::launch::async, [stub = stub.get(), port, request]()
-                                        {
-            grpc::ClientContext context;
-            configs::MessageResponse response;
-            grpc::Status status = stub->SendMessage(&context, request, &response);
-            if (status.ok())
-                std::cout << "Message sent to " << port
-                          << ", reply: " << response.reply() << std::endl;
-            else
-                std::cerr << "Failed to send to " << port
-                          << ", error: " << status.error_message() << std::endl; }));
-    }
-
-    for (auto &f : futures)
-        f.get();
 }
