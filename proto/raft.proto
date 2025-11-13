@@ -7,4 +7,5 @@ import "configNet.proto";
 service RaftService {
     rpc SendMessage (configs.MessageRequest) returns (configs.MessageResponse);
     rpc RequestVote (configs.RequestVoteRequest) returns (configs.RequestVoteResponse);
+    rpc HeartSend (configs.AppendEntriesRequest) returns (configs.AppendEntriesResponse);
 }

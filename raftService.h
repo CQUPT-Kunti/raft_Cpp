@@ -33,6 +33,10 @@ public:
     Status RequestVote(grpc::ServerContext *context,
                        const configs::RequestVoteRequest *request,
                        configs::RequestVoteResponse *response) override;
+
+    Status HeartSend(grpc::ServerContext *context,
+                     const configs::AppendEntriesRequest *request,
+                     configs::AppendEntriesResponse *response) override;
     RaftServiceImpl(RaftNode &node_);
     ~RaftServiceImpl();
     void Startgrpc();
@@ -40,6 +44,7 @@ public:
     void BroadcastMessage(std::string msg);
     void BroadcastMessageAsync(std::string msg);
     void Vote();
+    bool checkLogUptodate(int term, int index);
 
 private:
     std::thread serverThread_;
