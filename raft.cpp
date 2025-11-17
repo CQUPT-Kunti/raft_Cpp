@@ -60,5 +60,7 @@ void RaftNode::StartService()
 {
     service.Startgrpc();
     time_epoll.TimeServiceStart();
+    time_epoll.addVoteEvent([this]()
+                            { this->service.Vote(); });
     // std::cout << " 是否 已经 阻塞" << std::endl;
 }

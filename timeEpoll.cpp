@@ -15,7 +15,7 @@
 //     }
 // }
 
-TimeEpoll::TimeEpoll() : vote_fd(0), heart_fd(0)
+TimeEpoll::TimeEpoll() : vote_fd(-1), heart_fd(-1)
 {
     epoll_fd = epoll_create1(0);
     if (epoll_fd < 0)
@@ -46,6 +46,47 @@ void TimeEpoll::resetOutTime(TimerArgs &time_arg, int min_ms, int max_ms)
     time_arg.endTime = std::chrono::steady_clock::now() + time_arg.middleTime;
 }
 
+void TimeEpoll::addVoteEvent(func voteFunction)
+{
+    {
+        std::unique_lock<std::shared_mutex> lock(time_mtx);
+        voteCallback = voteFunction;
+        voteState = true;
+    }
+    resetOutTime(vote_time_arg, 150, 600);
+    if (vote_fd == -1)
+    {
+        vote_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+        struct epoll_event ev{};
+        if (vote_fd < 0)
+        {
+            std::cerr << "timerfd_create() failed!" << std::endl;
+            return;
+        }
+        ev.events = EPOLLIN;
+        ev.data.fd = vote_fd;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, vote_fd, &ev) < 0)
+        {
+            std::cerr << "epoll_ctl ADD vote_fd failed!" << std::endl;
+            exit(0);
+        }
+    }
+    auto remain = std::chrono::duration_cast<std::chrono::milliseconds>(
+        vote_time_arg.endTime - vote_time_arg.startTime);
+    long ms = remain.count();
+    if (ms < 1)
+        ms = 1;
+    struct itimerspec newValue{};
+    newValue.it_value.tv_sec = ms / 1000;
+    newValue.it_value.tv_nsec = (ms % 1000) * 1000000;
+
+    // 一次性触发
+    newValue.it_interval.tv_sec = 0;
+    newValue.it_interval.tv_nsec = 0;
+
+    timerfd_settime(vote_fd, 0, &newValue, nullptr);
+}
+
 void TimeEpoll::TimeServiceStart()
 {
     timeEpoll_thread = std::thread([this]()
@@ -70,11 +111,11 @@ void TimeEpoll::TimeServiceStart()
 
                                         {
                                             std::unique_lock<std::shared_mutex> lock(time_mtx);
-                                            if (fd == vote_fd)
+                                            if (fd == vote_fd&&voteState == true)
                                             {
-                                                // voteCallback();
+                                                voteCallback();
                                             }
-                                            if (fd == heart_fd)
+                                            if (fd == heart_fd&&heartState == true)
                                             {
                                                 // heartCallback();
                                             }

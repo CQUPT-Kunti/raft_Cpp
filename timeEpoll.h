@@ -19,6 +19,7 @@ public:
     void resetOutTime(TimerArgs &time_arg, int min_ms, int max_ms);
     int randomBetween(int minMs, int maxMs);
     void TimeServiceStart();
+    void addVoteEvent(func voteFunction);
 
 private:
     int epoll_fd;
@@ -27,9 +28,13 @@ private:
     std::shared_mutex time_mtx;
 
     std::thread timeEpoll_thread;
+
     TimerArgs vote_time_arg;
     TimerArgs heart_time_arg;
 
-    // std::function<void()> voteCallback;
+    func voteCallback;
     // std::function<void()> heartCallback;
+
+    bool voteState;
+    bool heartState;
 };

@@ -81,7 +81,7 @@ void RaftServiceImpl::Startgrpc()
     }
     InitStubs();
 
-    Vote();
+    // Vote();
 
     serverThread_ = std::thread([this]()
                                 { server_->Wait(); });
@@ -158,6 +158,7 @@ void RaftServiceImpl::Vote()
                 if (node.voteNums >= follor_num && tempNodeconfig.state != NodeState::Leader)
                 {
                     std::cout << node.getNetArgs().port << " has beacomed a leader " << std::endl;
+                    tempNodeconfig.state = NodeState::Leader;
                 }
             }
         }
