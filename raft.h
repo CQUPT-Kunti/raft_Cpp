@@ -1,6 +1,7 @@
 #pragma once
 
 #include "configArgs.h"
+#include "timeEpoll.h"
 #include "raftService.h"
 #include <memory>
 #include <thread>
@@ -10,6 +11,7 @@
 #include "raft.grpc.pb.h"
 
 class RaftServiceImpl;
+class TimeEpoll;
 
 class RaftNode
 {
@@ -18,13 +20,14 @@ private:
     NodeArgs node_args;
     std::vector<netArgs> group;
     RaftServiceImpl service;
+    TimeEpoll time_epoll;
     std::unique_ptr<grpc::Server> server_;
     std::shared_mutex mtx;
 
 public:
     int nodeId;
     int voteNums;
-    std::shared_mutex  &getMutex();
+    std::shared_mutex &getMutex();
     RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s);
     void StartService();
     std::vector<netArgs> &getGroup();

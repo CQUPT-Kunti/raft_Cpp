@@ -26,8 +26,9 @@ TimeEpoll::TimeEpoll() : vote_fd(0), heart_fd(0)
 }
 TimeEpoll::~TimeEpoll()
 {
-    if (epoll_fd > 0)
-        close(epoll_fd);
+
+    if (timeEpoll_thread.joinable())
+        timeEpoll_thread.join();
 }
 
 int TimeEpoll::randomBetween(int minMs, int maxMs)
