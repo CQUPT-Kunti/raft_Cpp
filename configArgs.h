@@ -16,9 +16,9 @@ struct netArgs
 
 struct TimerArgs
 {
-    std::chrono::steady_clock::time_point startTime; // 开始时间
-    std::chrono::steady_clock::time_point endTime;   // 结束时间
-    std::chrono::milliseconds processTime;           // 处理时长（间隔）
+    std::chrono::steady_clock::time_point startTime; // 任务开始的时间
+    std::chrono::milliseconds middleTime;            // 可选中间检查点或随机触发点
+    std::chrono::steady_clock::time_point endTime;   // 任务截止或触发时间
 };
 
 enum class NodeState

@@ -30,6 +30,8 @@ Status RaftServiceImpl::RequestVote(grpc::ServerContext *context,
     {
         std::unique_lock<std::shared_mutex> lock(node.getMutex());
         response->set_votegranted(false);
+        if (tempNodeconfig.state == NodeState::Follower && tempNodeconfig.votedFor != -1)
+            return Status::OK;
         response->set_term(tempNodeconfig.currentTerm);
         if (request->term() < tempNodeconfig.currentTerm)
         {
@@ -48,6 +50,7 @@ Status RaftServiceImpl::RequestVote(grpc::ServerContext *context,
         {
             tempNodeconfig.votedFor = request->condidateid();
             response->set_votegranted(true);
+            node.voteNums -= 1;
         }
 
         response->set_term(tempNodeconfig.currentTerm);
@@ -143,6 +146,7 @@ void RaftServiceImpl::Vote()
                                     return VoteResult{port,status,response}; }));
     }
 
+    int follor_num = peers.size() / 2 + 1;
     for (auto &f : results)
     {
         VoteResult result = f.get();
@@ -151,8 +155,11 @@ void RaftServiceImpl::Vote()
             {
                 std::unique_lock<std::shared_mutex> lock(node.getMutex());
                 node.voteNums += 1;
+                if (node.voteNums >= follor_num && tempNodeconfig.state != NodeState::Leader)
+                {
+                    std::cout << node.getNetArgs().port << " has beacomed a leader " << std::endl;
+                }
             }
-            std::cout << node.getNetArgs().port << "accpet a page from" << result.port << " nums is " << node.voteNums << std::endl;
         }
     }
 }
