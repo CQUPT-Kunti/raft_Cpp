@@ -3,6 +3,7 @@
 #include "configArgs.h"
 #include "timeEpoll.h"
 #include "raftService.h"
+
 #include <memory>
 #include <thread>
 #include <shared_mutex>
@@ -33,6 +34,7 @@ public:
     std::vector<netArgs> &getGroup();
     netArgs &getNetArgs();
     NodeArgs &getNodeArgs();
+    TimeEpoll &getTimeEpoll();
     void BroadcastMessage(const std::string &content);
     void InitStubs();
     bool checkLogUptodate(int term, int index);

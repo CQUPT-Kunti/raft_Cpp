@@ -31,6 +31,30 @@ TimeEpoll::~TimeEpoll()
         timeEpoll_thread.join();
 }
 
+std::shared_mutex &TimeEpoll::getMutex()
+{
+    return time_mtx;
+}
+
+void TimeEpoll::setVoteState(bool state)
+{
+    voteState = state;
+}
+
+void TimeEpoll::setHeartState(bool state)
+{
+    heartState = state;
+}
+
+TimerArgs &TimeEpoll::getVoteTime()
+{
+    return vote_time_arg;
+}
+TimerArgs &TimeEpoll::getHeartTime()
+{
+    return heart_time_arg;
+}
+
 int TimeEpoll::randomBetween(int minMs, int maxMs)
 {
     static thread_local std::mt19937 gen{std::random_device{}()};
@@ -85,6 +109,46 @@ void TimeEpoll::addVoteEvent(func voteFunction)
     newValue.it_interval.tv_nsec = 0;
 
     timerfd_settime(vote_fd, 0, &newValue, nullptr);
+}
+
+void TimeEpoll::addHeartEvent(func heartFunction)
+{
+    {
+        std::unique_lock<std::shared_mutex> lock(time_mtx);
+        heartCallback = heartFunction;
+        heartState = false;
+    }
+    resetOutTime(heart_time_arg, 150, 600);
+    if (heart_fd == -1)
+    {
+        heart_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
+        struct epoll_event ev{};
+        if (heart_fd < 0)
+        {
+            std::cerr << "timerfd_create() failed!" << std::endl;
+            return;
+        }
+        ev.events = EPOLLIN;
+        ev.data.fd = heart_fd;
+        if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, heart_fd, &ev) < 0)
+        {
+            std::cerr << "epoll_ctl ADD heart_fd failed!" << std::endl;
+            exit(0);
+        }
+    }
+    auto remain = std::chrono::duration_cast<std::chrono::milliseconds>(
+        heart_time_arg.endTime - heart_time_arg.startTime);
+    long ms = remain.count();
+    if (ms < 1)
+        ms = 1;
+    struct itimerspec newValue{};
+    newValue.it_value.tv_sec = ms / 1000;
+    newValue.it_value.tv_nsec = (ms % 1000) * 1000000;
+
+    // 一次性触发
+    newValue.it_interval.tv_sec = 0;
+    newValue.it_interval.tv_nsec = 0;
+    timerfd_settime(heart_fd, 0, &newValue, nullptr);
 }
 
 void TimeEpoll::TimeServiceStart()

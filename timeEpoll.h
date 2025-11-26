@@ -20,6 +20,14 @@ public:
     int randomBetween(int minMs, int maxMs);
     void TimeServiceStart();
     void addVoteEvent(func voteFunction);
+    void addHeartEvent(func HeartFunction);
+    std::shared_mutex &getMutex();
+
+    void setVoteState(bool state);
+    void setHeartState(bool state);
+
+    TimerArgs &getVoteTime();
+    TimerArgs &getHeartTime();
 
 private:
     int epoll_fd;
@@ -33,7 +41,7 @@ private:
     TimerArgs heart_time_arg;
 
     func voteCallback;
-    // std::function<void()> heartCallback;
+    std::function<void()> heartCallback;
 
     bool voteState;
     bool heartState;

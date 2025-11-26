@@ -62,6 +62,7 @@ Status RaftServiceImpl::HeartSend(grpc::ServerContext *context,
                                   const configs::AppendEntriesRequest *request,
                                   configs::AppendEntriesResponse *response)
 {
+    std::cout << node.getNetArgs().port << " has accpet heart" << std::endl;
     return Status::OK;
 }
 
@@ -112,7 +113,6 @@ void randomSleepMicroseconds(int min_us, int max_us)
 
 void RaftServiceImpl::Vote()
 {
-    randomSleepMicroseconds(300000, 600000);
     if (tempNodeconfig.state == NodeState::Leader)
         return;
 
@@ -157,10 +157,43 @@ void RaftServiceImpl::Vote()
                 node.voteNums += 1;
                 if (node.voteNums >= follor_num && tempNodeconfig.state != NodeState::Leader)
                 {
-                    std::cout << node.getNetArgs().port << " has beacomed a leader " << std::endl;
-                    tempNodeconfig.state = NodeState::Leader;
+                    {
+                        // std::unique_lock<std::shared_mutex> lock(node.getMutex());
+                        std::cout << node.getNetArgs().port << " has beacomed a leader " << std::endl;
+                        tempNodeconfig.state = NodeState::Leader;
+                    }
+                    {
+                        // std::unique_lock<std::shared_mutex> lock(node.getTimeEpoll().getMutex());
+                        node.getTimeEpoll().setVoteState(false);
+                        node.getTimeEpoll().setHeartState(true);
+                        node.getTimeEpoll().resetOutTime(node.getTimeEpoll().getVoteTime(), 150, 600);
+                        node.getTimeEpoll().resetOutTime(node.getTimeEpoll().getHeartTime(), 150, 600);
+                    }
+                    Heart();
                 }
             }
+        }
+    }
+}
+
+void RaftServiceImpl::Heart()
+{
+    if (tempNodeconfig.state != NodeState::Leader)
+    {
+        return;
+    }
+
+    configs::AppendEntriesRequest request;
+    {
+        std::unique_lock<std::shared_mutex> lock(node.getMutex());
+        for (const auto &[port, stub] : peers)
+        {
+            (void)std::async(std::launch::async, [stub = stub.get(),
+                                                  request]()
+                             {
+                grpc::ClientContext context;
+                configs::AppendEntriesResponse response;
+                 grpc::Status status = stub->HeartSend(&context, request, &response); });
         }
     }
 }

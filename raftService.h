@@ -44,6 +44,7 @@ public:
     void BroadcastMessage(std::string msg);
     void BroadcastMessageAsync(std::string msg);
     void Vote();
+    void Heart();
     bool checkLogUptodate(int term, int index);
 
 private:

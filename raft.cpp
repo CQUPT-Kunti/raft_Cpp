@@ -33,6 +33,11 @@ NodeArgs &RaftNode::getNodeArgs()
     return node_args;
 }
 
+TimeEpoll &RaftNode::getTimeEpoll()
+{
+    return time_epoll;
+}
+
 std::shared_mutex &RaftNode::getMutex()
 {
     return mtx;
