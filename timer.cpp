@@ -1,25 +1,38 @@
 #include "timer.h"
 
-Timer::Timer(int min_s, int max_s, func func_)
+Timer::Timer() : timeout_ms(0) {}
+
+void Timer::set(int min_ms, int max_ms, CallbackFunc func)
 {
-    callBack = func_;
-    reset_time(min_s, max_s);
+    callback = func;
+    reset(min_ms, max_ms);
 }
 
-int Timer::randomBetween(int minMs, int maxMs)
+void Timer::reset(int min_ms, int max_ms)
+{
+    timeout_ms = randomBetween(min_ms, max_ms);
+    expire_time = std::chrono::steady_clock::now() +
+                  std::chrono::milliseconds(timeout_ms);
+}
+
+int Timer::randomBetween(int min, int max)
 {
     static thread_local std::mt19937 gen{std::random_device{}()};
-    std::uniform_int_distribution<> dist(minMs, maxMs);
+    std::uniform_int_distribution<> dist(min, max);
     return dist(gen);
 }
 
-void Timer::reset_time(int min_s, int max_s)
+std::chrono::steady_clock::time_point Timer::getExpireTime() const
 {
-    out_times = randomBetween(min_s, max_s);
-    queue_outTime_index = std::chrono::steady_clock::now() + std::chrono::milliseconds(out_times);
+    return expire_time;
 }
 
-std::chrono::steady_clock::time_point Timer::getTime() const
+CallbackFunc Timer::getCallback() const
 {
-    return queue_outTime_index;
+    return callback;
+}
+
+bool Timer::operator>(const Timer &other) const
+{
+    return expire_time > other.expire_time;
 }

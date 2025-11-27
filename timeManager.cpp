@@ -1,8 +1,11 @@
 #include "timeManager.h"
+#include <iostream>
 
-TimeManager::TimeManager(ThreadPool &pool) : threadPool(pool)
+TimeManager::TimeManager(ThreadPool *pool, size_t timer_pool_size)
+    : running(true), thread_pool(pool), timer_pool(timer_pool_size)
 {
-    consume_thread = std::thread(&TimeManager::run, this);
+
+    worker_thread = std::thread(&TimeManager::run, this);
 }
 
 TimeManager::~TimeManager()
@@ -10,35 +13,54 @@ TimeManager::~TimeManager()
     stop();
 }
 
+void TimeManager::addTimer(int min_ms, int max_ms, CallbackFunc callback)
+{
+    Timer *timer = timer_pool.acquire();
+    timer->set(min_ms, max_ms, callback);
+
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        timer_queue.push(timer);
+    }
+    cv.notify_one();
+}
+
 void TimeManager::run()
 {
     while (running)
     {
-        std::unique_lock<std::mutex> lock(queue_mtx);
+        std::unique_lock<std::mutex> lock(mtx);
 
-        if (queue.empty())
+        if (timer_queue.empty())
         {
-            cv.wait(lock, [this]
-                    { return !running || !queue.empty(); });
+            cv.wait(lock, [this]()
+                    { return !running || !timer_queue.empty(); });
+
             if (!running)
             {
-                return; // 正常退出
+                return;
             }
         }
 
+        Timer *timer = timer_queue.top();
         auto now = std::chrono::steady_clock::now();
-        auto timer = queue.top();
 
-        if (timer->getTime() <= now)
+        if (timer->getExpireTime() <= now)
         {
-            queue.pop();
-            // 提交任务到线程池
-            threadPool.enqueue(timer->getCallback());
+            timer_queue.pop();
+
+            CallbackFunc callback = timer->getCallback();
+            timer_pool.release(timer); // 归还到池中
+
+            lock.unlock();
+
+            // 提交到线程池执行
+            thread_pool->submit(callback);
         }
         else
         {
-            auto wait_time = std::chrono::duration_cast<std::chrono::milliseconds>(timer->getTime() - now);
-            cv.wait_for(lock, wait_time, [this]
+            auto wait_time = timer->getExpireTime() - now;
+            cv.wait_for(lock, wait_time, [this]()
                         { return !running; });
         }
     }
@@ -46,23 +68,21 @@ void TimeManager::run()
 
 void TimeManager::stop()
 {
-    {
-        std::lock_guard<std::mutex> lock(queue_mtx);
-        running = false;
-    }
+    running = false;
     cv.notify_all();
-    if (consume_thread.joinable())
+
+    if (worker_thread.joinable())
     {
-        consume_thread.join();
+        worker_thread.join();
     }
 }
 
-bool TimeManager::add_timer(std::shared_ptr<Timer> timer)
+size_t TimeManager::getFreeTimerCount()
 {
-    {
-        std::lock_guard<std::mutex> lock(queue_mtx);
-        queue.push(timer);
-    }
-    cv.notify_one();
-    return true;
+    return timer_pool.getFreeCount();
+}
+
+size_t TimeManager::getTotalTimerCount()
+{
+    return timer_pool.getTotalCount();
 }

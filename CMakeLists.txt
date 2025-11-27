@@ -1,86 +1,64 @@
-cmake_minimum_required(VERSION 3.14)
-project(raft_grpc_cluster)
+cmake_minimum_required(VERSION 3.15)
+project(RaftSystem)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(Threads REQUIRED)
 find_package(Protobuf REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
-find_package(Threads REQUIRED)
-find_package(asio-grpc CONFIG REQUIRED)
 
+# 生成protobuf和gRPC文件
+set(PROTO_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/proto/raft.proto
+    ${CMAKE_CURRENT_SOURCE_DIR}/proto/configNet.proto
+)
 
-# proto 文件
-file(GLOB PROTO_FILES "${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto")
-
-# 生成文件输出路径
-set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
-file(MAKE_DIRECTORY ${GENERATED_DIR})
-
-set(GENERATED_SRCS "")
-
-# 为每个 proto 文件生成 protobuf + gRPC C++ 文件
-foreach(proto ${PROTO_FILES})
-    get_filename_component(proto_name ${proto} NAME_WE)
-
-    set(proto_cpp "${GENERATED_DIR}/${proto_name}.pb.cc")
-    set(proto_h "${GENERATED_DIR}/${proto_name}.pb.h")
-    set(grpc_cpp "${GENERATED_DIR}/${proto_name}.grpc.pb.cc")
-    set(grpc_h "${GENERATED_DIR}/${proto_name}.grpc.pb.h")
-
-    # protobuf 文件生成
+foreach(PROTO_FILE ${PROTO_FILES})
+    get_filename_component(PROTO_PATH ${PROTO_FILE} PATH)
+    get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
+    
+    set(PROTO_SRC "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.pb.cc")
+    set(PROTO_HDR "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.pb.h")
+    set(GRPC_SRC "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.grpc.pb.cc")
+    set(GRPC_HDR "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.grpc.pb.h")
+    
     add_custom_command(
-        OUTPUT ${proto_cpp} ${proto_h}
-        COMMAND ${Protobuf_PROTOC_EXECUTABLE}
-        ARGS --cpp_out=${GENERATED_DIR}
-             -I ${CMAKE_CURRENT_SOURCE_DIR}/proto
-             ${proto}
-        DEPENDS ${proto}
-        COMMENT "Generating protobuf C++ for ${proto_name}"
-    )
-
-    # gRPC 文件生成
-    add_custom_command(
-        OUTPUT ${grpc_cpp} ${grpc_h}
-        COMMAND ${Protobuf_PROTOC_EXECUTABLE}
-        ARGS --grpc_out=${GENERATED_DIR}
+        OUTPUT ${PROTO_SRC} ${PROTO_HDR} ${GRPC_SRC} ${GRPC_HDR}
+        COMMAND protobuf::protoc
+        ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
+             --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
+             -I${PROTO_PATH}
              --plugin=protoc-gen-grpc=$<TARGET_FILE:gRPC::grpc_cpp_plugin>
-             -I ${CMAKE_CURRENT_SOURCE_DIR}/proto
-             ${proto}
-        DEPENDS ${proto} gRPC::grpc_cpp_plugin
-        COMMENT "Generating gRPC C++ for ${proto_name}"
+             ${PROTO_FILE}
+        DEPENDS ${PROTO_FILE}
     )
-
-    list(APPEND GENERATED_SRCS ${proto_cpp} ${grpc_cpp})
+    
+    list(APPEND PROTO_SRCS ${PROTO_SRC} ${GRPC_SRC})
+    list(APPEND PROTO_HDRS ${PROTO_HDR} ${GRPC_HDR})
 endforeach()
 
-# 生成 proto 文件的虚拟 target
-add_custom_target(proto_gen ALL DEPENDS ${GENERATED_SRCS})
-
-# 可执行文件
-add_executable(raft_node
+# 源文件
+set(SOURCE_FILES
     main.cpp
     raft.cpp
     raftService.cpp
-    timeEpoll.cpp
-    ${GENERATED_SRCS}   # 添加生成的 cpp 文件
+    timer.cpp
+    timerPool.cpp
+    ThreadPool.cpp
+    timeManager.cpp
+    ${PROTO_SRCS}
 )
 
-# 保证 raft_node 编译前先生成 proto
-add_dependencies(raft_node proto_gen)
+add_executable(raft_server ${SOURCE_FILES})
 
-# include 目录
-target_include_directories(raft_node
-    PRIVATE
-    ${GENERATED_DIR}         # 生成的 pb.h 和 grpc.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}  # 你的源码目录
+target_include_directories(raft_server PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-# 链接库
-target_link_libraries(raft_node
-    PRIVATE
+target_link_libraries(raft_server
     gRPC::grpc++
     protobuf::libprotobuf
     Threads::Threads
-    asio-grpc::asio-grpc
 )

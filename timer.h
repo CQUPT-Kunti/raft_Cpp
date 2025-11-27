@@ -1,29 +1,37 @@
 #pragma once
+
 #include <chrono>
 #include <random>
 #include <functional>
 
-#define func std::function<void()>
+typedef std::function<void()> CallbackFunc;
 
-// 定时器载体
 class Timer
 {
 private:
-    std::chrono::steady_clock::time_point queue_outTime_index;
-    int out_times;
-    func callBack;
+    std::chrono::steady_clock::time_point expire_time;
+    CallbackFunc callback;
+    int timeout_ms;
 
 public:
-    Timer(int min_s, int max_s, func func_);
+    Timer();
     ~Timer() = default;
 
-    void reset_time(int min_s, int max_s);
-    int randomBetween(int minMs, int maxMs);
-    std::chrono::steady_clock::time_point getTime() const;
-    func getCallback() const { return callBack; }
+    // 设置定时器
+    void set(int min_ms, int max_ms, CallbackFunc func);
 
-    bool operator>(const Timer &other) const
-    {
-        return queue_outTime_index > other.queue_outTime_index;
-    }
+    // 重置时间
+    void reset(int min_ms, int max_ms);
+
+    // 获取过期时间
+    std::chrono::steady_clock::time_point getExpireTime() const;
+
+    // 获取回调函数
+    CallbackFunc getCallback() const;
+
+    // 比较操作符
+    bool operator>(const Timer &other) const;
+
+private:
+    int randomBetween(int min, int max);
 };

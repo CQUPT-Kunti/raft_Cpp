@@ -1,18 +1,13 @@
 #pragma once
 
 #include "configArgs.h"
-#include "timeEpoll.h"
 #include "raftService.h"
-
+#include "ThreadPool.h"
+#include "timeManager.h"
+#include <mutex>
 #include <memory>
-#include <thread>
-#include <shared_mutex>
-
-#include <grpcpp/grpcpp.h>
-#include "raft.grpc.pb.h"
 
 class RaftServiceImpl;
-class TimeEpoll;
 
 class RaftNode
 {
@@ -20,22 +15,25 @@ private:
     netArgs net_args;
     NodeArgs node_args;
     std::vector<netArgs> group;
-    RaftServiceImpl service;
-    TimeEpoll time_epoll;
-    std::unique_ptr<grpc::Server> server_;
-    std::shared_mutex mtx;
+    RaftServiceImpl *service;
+    std::mutex mtx;
+
+    std::unique_ptr<ThreadPool> thread_pool;
+    std::unique_ptr<TimeManager> time_manager;
 
 public:
     int nodeId;
     int voteNums;
-    std::shared_mutex &getMutex();
+
     RaftNode(netArgs args, int node_id, std::vector<netArgs> arg_s);
+    ~RaftNode();
+
     void StartService();
+
     std::vector<netArgs> &getGroup();
     netArgs &getNetArgs();
     NodeArgs &getNodeArgs();
-    TimeEpoll &getTimeEpoll();
-    void BroadcastMessage(const std::string &content);
-    void InitStubs();
-    bool checkLogUptodate(int term, int index);
+    std::mutex &getMutex();
+
+    RaftServiceImpl *getService();
 };
