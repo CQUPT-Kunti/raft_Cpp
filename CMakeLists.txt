@@ -41,12 +41,14 @@ endforeach()
 # 源文件
 set(SOURCE_FILES
     main.cpp
-    raft.cpp
-    raftService.cpp
+    election.cpp
+    heartbeat.cpp
+    raft_node.cpp
+    log_replication.cpp
+    thread_pool.cpp
+    time_manager.cpp
+    timer_pool.cpp
     timer.cpp
-    timerPool.cpp
-    ThreadPool.cpp
-    timeManager.cpp
     ${PROTO_SRCS}
 )
 
